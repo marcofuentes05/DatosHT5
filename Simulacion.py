@@ -4,50 +4,55 @@
 
 import simpy
 import random
-random.seed(30)
+random.seed(5)
 
 maximo_memoria_proceso = 10
 maximo_instrucciones = 10
 instrucciones_por_unidad = 3
+tiempo_total = 0
+lst_tiempo = []
 
 def programa(env, nombre, instrucciones, memoria, cpu, ram):
-    print(instrucciones," para ", nombre)
     num = int (instrucciones/instrucciones_por_unidad)+1
     
     contador = 0
     
     yield ram.get(memoria)
     #Ya tiene memoria, el estado es READY
-    print(nombre," ya tiene RAM asignada")
     while instrucciones > 0:
-        
         with cpu.request() as req:
             yield req
             #Si llega aqui, ya se esta procesando
             instrucciones -= instrucciones_por_unidad
-            print("Las instrucciones restantes del ",nombre," son: ",instrucciones)
             yield env.timeout(1)
-            print(nombre, " acaba de ejecutarse una vez @", env.now)
+            
             contador += 1
-            print("El contador es ",contador)
-
+            
+            aleatorio = random.randint(1,2)
+            if aleatorio == 1:
+                env.timeout(1)
+                print(nombre," está en waiting @",env.now)
             if instrucciones <= 0:
                 break
-                yield ram.put(memoria)
-                print(nombre," estuvo ", contador, " en el sistema")
-
-    print("El nivel de la ram es: ",ram.level)
-#---------------------------------
+    yield ram.put(memoria)
+    print(nombre," estuvo ", contador, " en el sistema")
+    lst_tiempo.append(contador)
+    
+    
+#-----------------------------------------------------------------------------------------------------------------------
 
 env = simpy.Environment()
 
 ram = simpy.Container(env, capacity = 100, init = 100)
 
 cpu = simpy.Resource(env, capacity = 1)
-print("El nivel de la ram es: ", ram.level)
-for i in range (2):
+numero_procesos = 10
+for i in range (numero_procesos):
     env.process(programa(env, "Proceso %s" %i, random.randint(1,maximo_instrucciones),random.randint(1,maximo_memoria_proceso), cpu,ram))
 
+print("Tiempo total: ",env.now)
+tiempoPromedio = tiempo_total/numero_procesos
+print("\n\n\nTiempo promedio: ",tiempoPromedio," ciclos\n\n\n")
 env.run()
 
 
